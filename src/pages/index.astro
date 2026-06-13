@@ -1,17 +1,962 @@
 ---
+import { createClient } from 'microcms-js-sdk';
 
+// .env ファイルに定義した環境変数を読み込み
+const client = createClient({
+  serviceDomain: import.meta.env.MICROCMS_SERVICE_DOMAIN,
+  apiKey: import.meta.env.MICROCMS_API_KEY,
+});
+
+const response = await client.get({
+  endpoint: 'news',
+  queries: { limit: 5, orders: '-publishedAt' }
+});
+
+const newsData = response.contents.map((item : any) => {
+  const d = new Date(item.publishedAt);
+  
+  // 「2026.06.13」の形を生成
+  const dateStr = d.toLocaleDateString('ja-JP', {
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).replace(/\//g, '.');
+  
+  // 「15:30」の形を2桁ゼロパディングで確実に生成
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const timeStr = `${hours}:${minutes}`;
+
+  return {
+    id: item.id,
+    // 日付と時間を半角スペースで美しく結合
+    date: `${dateStr} ${timeStr}`,
+    title: item.title,
+    body: item.body
+  };
+});
+const companyName = "WakaTec.LLC";
+const siteTitle = "合同会社WakaTec - 公式ウェブサイト";
+
+//コピーライト年号表示処理
+const startYear = 2019;
+const currentYear = new Date().getFullYear();
+const copyrightYear = startYear === currentYear ? `${startYear}` : `${startYear}-${currentYear}`;
+
+const hasNews = newsData && newsData.length > 0;
+const sidebarNewsList = hasNews ? newsData.slice(0, 2) : [];
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{siteTitle}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230b132b%22/><text y=%2275%22 x=%2212%22 font-family=%22sans-serif%22 font-size=%2275%22 font-weight=%22bold%22 fill=%22%23ffffff%22>W</text></svg>">
+  </head>
+  <body>
+    
+    <div class="site-container">
+      
+      <!-- 固定エリア -->
+      <aside class="sidebar">
+        <div class="top-group">
+          <div class="logo-area">
+            <div class="shodo-logo">WakaTec</div> 
+            <h1>Learn Technology, Refine Craftsmanship</h1>
+          </div>
+          <nav class="nav-menu">
+            <button class="active" data-index="0">ホーム</button>
+            <button data-index="1">製品</button>
+            <button data-index="2">サービス</button>
+            <button data-index="3">会社概要</button>
+            <button data-index="4">ご連絡</button>
+          </nav>
+        </div>
+
+        <!-- お知らせエリア -->
+        <div class={`latest-news-trigger ${!hasNews ? 'no-click' : ''}`}>
+          <span class="news-label">お知らせ</span>
+          {hasNews ? (
+            <div class="news-preview-container">
+              {sidebarNewsList.map((news:any) => (
+                <div class="news-preview-row">
+                  <span class="news-preview-date">{news.date}</span>
+                  <p class="news-preview-title" data-news-id={news.id}>{news.title}</p>
+                </div>
+              ))}
+              <span class="view-all-btn" id="viewAllTrigger">+ 一覧を見る</span>
+            </div>
+          ) : (
+            <p class="news-no-data-text">現在、新しいお知らせはありません。</p>
+          )}
+        </div>
+      </aside>
+
+      <!-- コンテンツエリア -->
+      <main class="content-area">
+        <div class="inside-wrapper" id="dynamicContent">
+          <!-- JavaScriptで挿入 -->
+        </div>
+      </main>
+
+      <!-- フッター -->
+      <footer class="site-footer">
+        <p>&copy; {copyrightYear} {companyName} All Rights Reserved.</p>
+      </footer>
+
+    </div>
+
+  </body>
 </html>
+
+<style>
+  /* --- PC用の基本レイアウト --- */
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    background-color: #0b132b;
+    color: #f4f6f9;
+    
+    font-family: 
+      -apple-system, 
+      BlinkMacSystemFont, 
+      "Segoe UI", 
+      Roboto, 
+      "Helvetica Neue", 
+      Arial, 
+      "Hiragino Kaku Gothic ProN",
+      "Hiragino Sans", 
+      "Meiryo", 
+      sans-serif;
+      
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .site-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden; 
+    position: relative;
+    width: 100%;
+  }
+  .sidebar {
+    width: 35%;
+    height: 100%;
+    border-right: 1px solid rgba(244, 246, 249, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 3rem;
+    box-sizing: border-box;
+    z-index: 10;
+  }
+  .shodo-logo { font-size: 3rem; font-weight: bold; margin-bottom: 0.5rem; color: #ffffff; }
+  
+  .sidebar h1 {
+    font-size: 0.85rem;
+    font-weight: 400;
+    margin: 0.5rem 0 0 0;
+    letter-spacing: 0.08em; 
+    line-height: 1.5;
+    opacity: 0.4;
+    text-transform: uppercase;
+  }
+  .nav-menu { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 3rem; }
+  .nav-menu button { background: none; border: none; color: #f4f6f9; text-align: left; font-size: 1.2rem; cursor: pointer; opacity: 0.5; transition: opacity 0.3s; padding: 0; }
+  .nav-menu button:hover, .nav-menu button.active { opacity: 1; }
+
+  /* ニュースエリアの複数件デザイン */
+  .latest-news-trigger { border-top: 1px solid rgba(244, 246, 249, 0.1); padding-top: 1.5rem; margin-bottom: 2rem; }
+  .news-label { font-size: 0.75rem; letter-spacing: 0.15em; color: #3a86ff; font-weight: bold; display: block; margin-bottom: 0.75rem; }
+  
+  .news-preview-container { display: flex; flex-direction: column; gap: 0.8rem; }
+  .news-preview-row { display: flex; flex-direction: column; gap: 0.1rem; }
+  
+  /* 📢 システム標準の等幅フォントへリセット */
+  .news-preview-date { 
+    font-family: monospace; 
+    font-size: 0.75rem; 
+    opacity: 0.3; 
+  }
+  
+  .news-preview-title { font-size: 0.85rem; margin: 0; line-height: 1.4; opacity: 0.6; cursor: pointer; transition: opacity 0.2s, color 0.2s; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .news-preview-title:hover { color: #ffffff; opacity: 0.9; }
+  
+  .view-all-btn { font-size: 0.75rem; opacity: 0.4; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: opacity 0.2s, color 0.2s; display: inline-block; margin-top: 0.4rem; width: max-content; }
+  .view-all-btn:hover { opacity: 1; color: #3a86ff; }
+  .news-no-data-text { font-size: 0.85rem; opacity: 0.3; margin: 0; font-style: italic; }
+  .latest-news-trigger.no-click { cursor: default; }
+
+  .content-area { width: 65%; height: 100%; display: flex; align-items: center; padding: 5rem; box-sizing: border-box; overflow-y: auto; }
+  .inside-wrapper { width: 100%; max-width: 650px; }
+  
+  :global(.inside-wrapper h2) { 
+    font-size: 2.5rem; 
+    margin: 0 0 1.5rem 0; 
+    font-weight: 700; 
+  }
+  :global(.inside-wrapper p) { font-size: 1.1rem; line-height: 1.8; opacity: 0.8; white-space: pre-wrap; margin: 0; }
+  
+  :global(.news-list) { list-style: none; padding: 0; margin: 0; }
+  :global(.news-item) { padding: 1.2rem 0; border-bottom: 1px solid rgba(244, 246, 249, 0.1); cursor: pointer; display: flex; gap: 2rem; align-items: baseline; }
+  :global(.news-item:hover .news-item-title) { color: #3a86ff; }
+  
+  /* 📢 ニュース一覧の日付もリセット */
+  :global(.news-item-date) { 
+    font-family: monospace; 
+    font-size: 0.9rem; 
+    opacity: 0.4; 
+    flex-shrink: 0; 
+  }
+  :global(.news-item-title) { font-size: 1.05rem; opacity: 0.8; margin: 0; transition: color 0.2s; }
+  
+  :global(.back-to-list) { background: none; border: none; color: #3a86ff; cursor: pointer; padding: 0; font-size: 0.9rem; margin-bottom: 2rem; display: block; }
+  :global(.no-news-message) { font-size: 1.1rem; opacity: 0.5; }
+
+  .site-footer { position: absolute; left: 3rem; bottom: 1.5rem; opacity: 0.25; transition: opacity 0.3s; z-index: 15; }
+  .site-footer:hover { opacity: 0.8; }
+  
+  /* 📢 コピーライトを標準の等幅フォントへリセット */
+  .site-footer p { 
+    font-family: monospace; 
+    font-size: 0.8rem; 
+    letter-spacing: 0.05em; 
+    margin: 0; 
+  }
+
+  /* --- スマホ・タブレット用スタイル --- */
+  @media (max-width: 768px) {
+    :global(body) {
+      overflow: visible !important; 
+      height: auto !important;
+    }
+
+    .site-container {
+      display: flex;
+      flex-direction: column; 
+      height: auto !important;     
+      min-height: 100vh;      
+      overflow: visible !important; 
+    }
+    
+    .sidebar { 
+      width: 100%; 
+      height: auto; 
+      border-right: none; 
+      border-bottom: 1px solid rgba(244, 246, 249, 0.1); 
+      padding: 1.5rem; 
+      gap: 1rem; 
+    }
+    .top-group { display: flex; flex-direction: column; gap: 1rem; }
+    
+    .logo-area { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.2rem; margin-bottom: 1rem; width: 100%; }
+    .shodo-logo { font-size: 1.8rem; margin: 0; line-height: 1.1; }
+    
+    .sidebar h1 { 
+      display: block; 
+      font-size: 0.65rem; 
+      opacity: 0.4; 
+      letter-spacing: 0.05em; 
+      line-height: 1.3; 
+      margin: 0; 
+      word-break: break-word; 
+      max-width: 90%; 
+    }
+
+    .nav-menu { flex-direction: row; justify-content: space-between; margin-top: 0; gap: 0; background: rgba(254, 254, 254, 0.03); padding: 0.4rem; border-radius: 6px; }
+    .nav-menu button { font-size: 0.95rem; padding: 0.4rem 0.8rem; flex: 1; text-align: center; }
+
+    .latest-news-trigger { margin-top: 0.5rem; padding-top: 0.8rem; margin-bottom: 0; }
+    .news-label { text-align: center; margin-bottom: 0.5rem; }
+    .news-preview-container { gap: 0.6rem; align-items: center; }
+    .news-preview-row { flex-direction: row; gap: 0.5rem; justify-content: center; width: 100%; max-width: 450px; }
+    .news-preview-date { flex-shrink: 0; }
+    .news-preview-title { font-size: 0.8rem; text-align: left; }
+    .view-all-btn { margin-top: 0.2rem; }
+
+    .content-area { 
+      width: 100%; 
+      height: auto;           
+      padding: 3.5rem 1.5rem; 
+      overflow: visible;      
+    }
+    :global(.inside-wrapper h2) { font-size: 1.8rem; margin-bottom: 1rem; }
+    :global(.inside-wrapper p) { font-size: 1rem; }
+    :global(.news-item) { flex-direction: column; gap: 0.3rem; padding: 1rem 0; }
+
+    .site-footer { 
+      position: relative;     
+      left: 0;                
+      bottom: 0;              
+      width: 100%; 
+      text-align: center; 
+      padding: 3rem 1.5rem;   
+      border-top: 1px solid rgba(244, 246, 249, 0.05); 
+      box-sizing: border-box; 
+      opacity: 0.3;
+      margin-top: auto;       
+    }
+    .site-footer p { font-size: 0.75rem; }
+  }
+</style>
+
+<script define:vars={{ newsData, siteTitle }}>
+  const pages = [
+    { 
+      title: "技術を学び、技法を磨く。", 
+      body: "WakaTecという名には、2つの“Tec”が込められています。\n\n「Technology」は、先人が築いた確かな技術を学ぶこと。\n「Technique」は、学んだ技術を自らの手で表現し、磨き上げること。\n\n技術と経験が織りなす技法で、お客様が楽になるソリューションを創ります。" 
+    },
+    { 
+      title: "全ては楽であるために",
+      products: [
+        {
+          name: "Hayokoi",
+          tagline: "車検証QRをスマホで読取。SMSで車検案内を自動配信。",
+          desc: "自動車に関わるすべての人のための業務効率化ツール。車検証のQRコードを瞬時に読み取ってクラウドに記録し、メールやSNSで取引先へ即座に共有。さらに、車検時期が近づいた顧客へSMSで自動的にお知らせを配信する機能を搭載し、現場の見積・発注から次回の入庫促進までをシームレスに自動化します。",
+          icon: "src/images/hayokoi_icon.webp",
+          lpUrl: "https://hayokoi.site"
+        },
+        {
+          name: "Hayauma",
+          tagline: "スマホで運行記録を入力。インボイス対応の請求書を一括発行。",
+          desc: "陸送業務の日報作成から請求書発行までをワンストップで効率化する業務支援ツール。スマホから出発・到着などの運行記録を簡単に入力するだけで、確実な日報データを蓄積。インボイス制度に対応した請求書を一括で自動生成し、毎月の事務負担を激減させます。",
+          icon: "src/images/hayauma_icon.webp",
+          lpUrl: "https://play.google.com/store/apps/details?id=llc.wakatec.hayauma&hl=ja"//LPがまだないからね
+        }
+      ]
+    },
+    { 
+      title: "サービス", 
+      capabilities: [
+        { title: "ウェブサイト制作", desc: "お客様のニーズに最適なサイトを制作" },
+        { title: "ウェブシステム開発", desc: "実用性を重視する「使える」システムを開発" },
+        { title: "モバイルアプリ開発", desc: "実用的なiOS/Androidアプリを開発" }
+      ],
+      // 📢 変更：1言語ごとにカラークラスを持たせるための配列に変更
+      languages: [
+        { name: "HTML", lang: "html" }, { name: "CSS", lang: "css" }, { name: "JavaScript", lang: "js" },
+        { name: "VBA", lang: "vba" }, { name: "Ruby", lang: "ruby" }, { name: "PHP", lang: "php" },
+        { name: "SQL", lang: "sql" }, { name: "Python", lang: "python" }, { name: "Java", lang: "java" },
+        { name: "Kotlin", lang: "kotlin" }, { name: "Swift", lang: "swift" }, { name: "Dart", lang: "dart" }
+      ],
+      flow: "ご相談 → ヒアリング → 解決策提示 → 設計 → 試作 → 開発 → 納品 → 運用 → 保守"
+    },
+    { 
+      title: "会社概要", 
+      info: [
+        { label: "会社名", val: "合同会社WakaTec" },
+        { label: "本社所在地", val: "〒869-2807 熊本県阿蘇市大字波野新波野464" },
+        { label: "熊本開発室", val: "〒861-2103 熊本県熊本市東区若葉4丁目11-2-102" },
+        { label: "代表者", val: "代表社員 若井 睦月" },
+        { label: "設立", val: "2019年6月3日" },
+        { label: "従業員数", val: "3名" },
+        { label: "事業内容", val: "ウェブサイト制作 / 各種システム開発 / アプリ開発" }
+      ],
+      maps: {
+        honsha: "https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d1674.735974232095!2d131.155931!3d32.912127!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0xebefa6ffb00f79f9!2z5ZCI5ZCM5Lya56S-V2FrYVRlYw!5e0!3m2!1sja!2sjp!4v1654658213802!5m2!1sja!2sjp",  // 本社（阿蘇）
+        kaihatsu: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3354.760280138247!2d130.75893267643738!3d32.77209477366556!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3540f24dd589fd8f%3A0x5dc5059c483d72ce!2z44CSODYxLTIxMDMg54aK5pys55yM54aK5pys5biC5p2x5Yy66Iul6JGJ77yU5LiB55uu77yR77yR4oiS77yS!5e0!3m2!1sja!2sjp!4v1781326952706!5m2!1sja!2sjp" // 開発室（熊本市東区）
+      }
+    },
+    { 
+      title: "ご連絡",
+      email: "wakatecllc@gmail.com",
+      tel: "090-9499-6513"
+    }
+  ];
+
+  let currentIndex = 0;
+  let isTransitioning = false;
+  let currentMode = "page"; 
+  let selectedNewsId = null; 
+  let scrollStorage = 0;   
+  const GEAR_ENGAGE = 400; 
+
+  const contentWrapper = document.getElementById('dynamicContent');
+  const buttons = document.querySelectorAll('.nav-menu button');
+  const viewAllTrigger = document.getElementById('viewAllTrigger');
+
+  function render() {
+    if (!contentWrapper) return;
+
+    if (currentMode === "page") {
+      if (currentIndex === 1) {
+        const pageData = pages[currentIndex];
+        let productsHTML = `<div class="products-grid">`;
+        
+        pageData.products.forEach(prod => {
+          productsHTML += `
+            <div class="product-card">
+              <div class="product-header-row">
+                <img src="${prod.icon}" alt="${prod.name} Icon" class="product-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                <div class="product-icon-fallback" style="display:none;">${prod.name[0]}</div>
+                <div class="product-title-meta">
+                  <h3>${prod.name}</h3>
+                  <span class="product-tagline">${prod.tagline}</span>
+                </div>
+              </div>
+              <p class="product-desc">${prod.desc}</p>
+              <a href="${prod.lpUrl}" target="_blank" rel="noopener noreferrer" class="product-lp-link">
+                製品サイトを見る <span>→</span>
+              </a>
+            </div>
+          `;
+        });
+        productsHTML += `</div>`;
+
+        contentWrapper.innerHTML = `
+          <h2>${pageData.title}</h2>
+          ${productsHTML}
+        `;
+      }
+      else if (currentIndex === 2) {
+        const srv = pages[currentIndex];
+        
+        let capsHTML = `<div class="service-caps-mini">`;
+        srv.capabilities.forEach(c => {
+          capsHTML += `
+            <div class="cap-card-mini">
+              <strong>${c.title}</strong><span>：${c.desc}</span>
+            </div>
+          `;
+        });
+        capsHTML += `</div>`;
+
+        // 📢 変更：配列からクラス付きのspan要素（カンマ区切り）を動的生成
+        let langsHTML = srv.languages.map(l => `<span class="lang-token lang-${l.lang}">${l.name}</span>`).join(', ');
+
+        contentWrapper.innerHTML = `
+          <h2>${srv.title}</h2>
+          <p class="service-intro-mini">設計・試作から開発・運用保守まで、すべての工程を自ら手を動かして作りきる「フルスタック」の開発体制。現場目線のソリューションを提供します。</p>
+          
+          <div class="service-section-mini">
+            <h4>業務内容</h4>
+            ${capsHTML}
+          </div>
+
+          <div class="service-section-mini">
+            <h4>開発可能な言語</h4>
+            <div class="tech-inline">${langsHTML}</div>
+          </div>
+
+          <div class="service-section-mini">
+            <h4>サービスの流れ</h4>
+            <div class="flow-inline">${srv.flow}</div>
+          </div>
+        `;
+      }
+      else if (currentIndex === 3) {
+        const comp = pages[currentIndex];
+        
+        let infoHTML = `<div class="company-table-mini">`;
+        comp.info.forEach(item => {
+          const isLocation = item.label.includes("所在地") || item.label.includes("開発室");
+          infoHTML += `
+            <div class="company-row-mini">
+              <div class="company-label-mini">${item.label}</div>
+              <div class="company-val-mini ${isLocation ? 'location-text' : ''}">${item.val}</div>
+            </div>
+          `;
+        });
+        infoHTML += `</div>`;
+
+        contentWrapper.innerHTML = `
+          <h2>${comp.title}</h2>
+          
+          ${infoHTML}
+
+          <div class="map-switcher">
+            <button class="map-tab active" data-map="honsha">本社の地図</button>
+            <button class="map-tab" data-map="kaihatsu">開発室の地図</button>
+          </div>
+
+          <div class="company-map-section">
+            <iframe id="companyIframe" src="${comp.maps.honsha}" width="100%" height="95" style="border:0; filter: grayscale(1) opacity(0.7);" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </div>
+        `;
+
+        const tabs = contentWrapper.querySelectorAll('.map-tab');
+        const iframe = contentWrapper.querySelector('#companyIframe');
+        
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const targetMap = tab.getAttribute('data-map');
+            if (iframe && targetMap) {
+              iframe.setAttribute('src', comp.maps[targetMap]);
+            }
+          });
+        });
+      }
+      else if (currentIndex === 4) {
+        const contact = pages[currentIndex];
+        contentWrapper.innerHTML = `
+          <h2>${contact.title}</h2>
+          <p class="contact-intro">プロジェクトのご相談・お見積もりなど、お気軽にお問い合わせください。</p>
+          
+          <div class="contact-container">
+            <form id="contactForm" class="contact-form">
+              <div class="form-row">
+                <input type="text" id="c_name" placeholder="お名前" required />
+                <input type="text" id="c_company" placeholder="貴社名" />
+              </div>
+              <input type="email" id="c_email" placeholder="メールアドレス" required />
+              <textarea id="c_message" placeholder="ご用件・お問い合わせ内容を入力してください" rows="3" required></textarea>
+              <button type="submit" class="submit-btn">メーラーを起動して送信 <span>→</span></button>
+            </form>
+
+            <div class="contact-direct">
+              <div class="direct-box">
+                <h4>直接のお問い合わせ</h4>
+                <a href="mailto:${contact.email}" class="direct-link">
+                  <span class="direct-icon">✉</span> ${contact.email}
+                </a>
+                <a href="tel:${contact.tel.replace(/-/g, '')}" class="direct-link">
+                  <span class="direct-icon">☎</span> ${contact.tel}
+                </a>
+                <p class="direct-note">※お急ぎの場合は、お電話または上記アドレスへ直接メールを頂けますと対応いたします。</p>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const form = contentWrapper.querySelector('#contactForm');
+        form?.addEventListener('submit', (e) => {
+          e.preventDefault(); // フォーム本来のリロード挙動を完全にブロック
+
+          const name = contentWrapper.querySelector('#c_name').value;
+          const company = contentWrapper.querySelector('#c_company').value || "個人";
+          const email = contentWrapper.querySelector('#c_email').value;
+          const msg = contentWrapper.querySelector('#c_message').value;
+
+          // 件名と本文のエンコード
+          const subject = encodeURIComponent(`【WakaTec問い合わせ】${company} ${name}様`);
+          const body = encodeURIComponent(
+            `合同会社WakaTec お問い合わせ窓口 行\n\n` +
+            `以下の内容でお問い合わせを生成しました。内容に間違いがなければこのまま送信してください。\n\n` +
+            `----------------------------------------\n` +
+            `【お名前】: ${name}\n` +
+            `【貴社名】: ${company}\n` +
+            `【返信用アドレス】: ${email}\n` +
+            `【お問い合わせ内容】:\n${msg}\n` +
+            `----------------------------------------`
+          );
+
+          // 目に見えないaタグを生成して確実にクリックイベントを発火させる
+          const mailtoLink = document.createElement('a');
+          mailtoLink.href = `mailto:${contact.email}?subject=${subject}&body=${body}`;
+          
+          document.body.appendChild(mailtoLink);
+          mailtoLink.click();
+          document.body.removeChild(mailtoLink);
+
+          // 📢 追記：メーラー起動と同時にフォームの入力内容を綺麗にクリア
+          form.reset();
+        });
+      }
+       else {
+        // 通常ページのレンダリング
+        contentWrapper.innerHTML = `
+          <h2>${pages[currentIndex].title}</h2>
+          <p>${pages[currentIndex].body}</p>
+        `;
+      }
+
+      buttons.forEach((btn, i) => {
+        if (i === currentIndex) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+
+      if (currentIndex === 0) {
+        document.title = siteTitle;
+      } else {
+        document.title = `${pages[currentIndex].title} - ${siteTitle}`;
+      }
+    } 
+    
+    else if (currentMode === "news-list") {
+      document.title = `Press Release - ${siteTitle}`;
+
+      if (!newsData || newsData.length === 0) {
+        contentWrapper.innerHTML = `
+          <h2>お知らせ</h2>
+          <p class="no-news-message">プレスリリースはまだ投稿されていません。</p>
+        `;
+        buttons.forEach(btn => btn.classList.remove('active'));
+        return;
+      }
+
+      let listHTML = `<ul class="news-list">`;
+      newsData.forEach((news) => {
+        listHTML += `
+          <li class="news-item" data-id="${news.id}">
+            <span class="news-item-date">${news.date}</span>
+            <span class="news-item-title">${news.title}</span>
+          </li>
+        `;
+      });
+      listHTML += `</ul>`;
+
+      contentWrapper.innerHTML = `
+        <h2>お知らせ</h2>
+        ${listHTML}
+      `;
+      buttons.forEach(btn => btn.classList.remove('active'));
+
+      document.querySelectorAll('.news-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.getAttribute('data-id');
+          engageGear(currentIndex, "news-detail", id); 
+        });
+      });
+    } 
+    
+    else if (currentMode === "news-detail") {
+      const news = newsData.find(n => n.id === selectedNewsId);
+      if (news) {
+        contentWrapper.innerHTML = `
+          <button class="back-to-list" id="backBtn">← 一覧に戻る</button>
+          <div class="news-detail-header">
+            <span class="news-item-date" style="display: block; margin-bottom: 0.5rem;">${news.date}</span>
+            <h2>${news.title}</h2>
+          </div>
+          <p>${news.body}</p>
+        `;
+        document.title = `${news.title} - ${siteTitle}`;
+        
+        document.getElementById('backBtn')?.addEventListener('click', () => {
+          engageGear(currentIndex, "news-list");
+        });
+      }
+    }
+  }
+
+  // マウスホイール検知
+  window.addEventListener('wheel', (event) => {
+    if (window.innerWidth <= 768) return;
+    if (isTransitioning) return;
+
+    if (currentMode === "news-list") {
+      scrollStorage += event.deltaY;
+      if (Math.abs(scrollStorage) > 100) {
+        engageGear(currentIndex, "page"); 
+      }
+      return;
+    }
+
+    if (currentMode === "news-detail") {
+      scrollStorage += event.deltaY;
+      const progress = Math.min(Math.abs(scrollStorage) / GEAR_ENGAGE, 1);
+      if (contentWrapper) contentWrapper.style.opacity = (1 - (progress * 0.8)).toString();
+
+      const currentNewsIndex = newsData.findIndex(n => n.id === selectedNewsId);
+
+      if (scrollStorage > GEAR_ENGAGE) {
+        if (currentNewsIndex < newsData.length - 1) {
+          const nextNewsId = newsData[currentNewsIndex + 1].id;
+          engageGear(currentIndex, "news-detail", nextNewsId);
+        } else {
+          scrollStorage = GEAR_ENGAGE;
+          if (contentWrapper) contentWrapper.style.opacity = "0.2";
+        }
+      } 
+      else if (scrollStorage < -GEAR_ENGAGE) {
+        if (currentNewsIndex > 0) {
+          const prevNewsId = newsData[currentNewsIndex - 1].id;
+          engageGear(currentIndex, "news-detail", prevNewsId);
+        } else {
+          scrollStorage = -GEAR_ENGAGE;
+          if (contentWrapper) contentWrapper.style.opacity = "0.2";
+        }
+      }
+      return;
+    }
+
+    scrollStorage += event.deltaY;
+    const progress = Math.min(Math.abs(scrollStorage) / GEAR_ENGAGE, 1);
+    if (contentWrapper) contentWrapper.style.opacity = (1 - (progress * 0.8)).toString();
+
+    if (scrollStorage > GEAR_ENGAGE) {
+      if (currentIndex < pages.length - 1) engageGear(currentIndex + 1, "page");
+      else { scrollStorage = GEAR_ENGAGE; if (contentWrapper) contentWrapper.style.opacity = "0.2"; }
+    } 
+    else if (scrollStorage < -GEAR_ENGAGE) {
+      if (currentIndex > 0) engageGear(currentIndex - 1, "page");
+      else { scrollStorage = -GEAR_ENGAGE; if (contentWrapper) contentWrapper.style.opacity = "0.2"; }
+    }
+  }, { passive: true });
+
+  function engageGear(nextIndex, mode, newsId = null) {
+    isTransitioning = true;
+    if (contentWrapper) contentWrapper.style.opacity = "0";
+
+    const delay = window.innerWidth <= 768 ? 0 : 100;
+
+    setTimeout(() => {
+      currentIndex = nextIndex;
+      currentMode = mode;
+      selectedNewsId = newsId; 
+      render(); 
+      scrollStorage = 0;
+
+      if (contentWrapper) contentWrapper.style.opacity = "1";
+      
+      if (window.innerWidth <= 768) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      setTimeout(() => { isTransitioning = false; }, 300);
+    }, delay);
+  }
+
+  let neutralTimeout;
+  window.addEventListener('wheel', () => {
+    if (window.innerWidth <= 768) return;
+    clearTimeout(neutralTimeout);
+    neutralTimeout = setTimeout(() => {
+      if (!isTransitioning && (currentMode === "page" || currentMode === "news-detail")) {
+        scrollStorage = 0;
+        if (contentWrapper) {
+          contentWrapper.style.transition = "opacity 0.2s ease";
+          contentWrapper.style.opacity = "1";
+          setTimeout(() => { contentWrapper.style.transition = "none"; }, 200);
+        }
+      }
+    }, 150);
+  });
+
+  // 📢 追記：キーボード（↑ / ↓ / Space）によるページ切り替え制御
+  window.addEventListener('keydown', (event) => {
+    // スマホ環境、または入力フォームにフォーカスしている間はキー操作を完全に無視（文字入力を阻害しないための絶対防衛ライン）
+    if (window.innerWidth <= 768) return;
+    if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+    // 押されたキーの判定
+    const isDownKey = event.key === 'ArrowDown' || event.key === ' ';
+    const isUpKey = event.key === 'ArrowUp';
+
+    if (!isDownKey && !isUpKey) return; // 矢印上下とSpace以外はスルー
+
+    // Spaceキーによるデフォルトのページスクロール挙動を強制ブロック
+    event.preventDefault();
+
+    if (isTransitioning) return;
+
+    // 1. ニュース一覧モードの時
+    if (currentMode === "news-list") {
+      if (isUpKey) engageGear(currentIndex, "page");
+      return;
+    }
+
+    // 2. ニュース詳細モードの時
+    if (currentMode === "news-detail") {
+      const currentNewsIndex = newsData.findIndex(n => n.id === selectedNewsId);
+      if (isDownKey) {
+        if (currentNewsIndex < newsData.length - 1) {
+          engageGear(currentIndex, "news-detail", newsData[currentNewsIndex + 1].id);
+        }
+      } else if (isUpKey) {
+        if (currentNewsIndex > 0) {
+          engageGear(currentIndex, "news-detail", newsData[currentNewsIndex - 1].id);
+        }
+      }
+      return;
+    }
+
+    // 3. 通常ページモードの時
+    if (isDownKey) {
+      if (currentIndex < pages.length - 1) engageGear(currentIndex + 1, "page");
+    } else if (isUpKey) {
+      if (currentIndex > 0) engageGear(currentIndex - 1, "page");
+    }
+  });
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const index = parseInt(button.getAttribute('data-index') || "0");
+      engageGear(index, "page");
+    });
+  });
+
+  document.querySelectorAll('[data-news-id]').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      const id = trigger.getAttribute('data-news-id');
+      if (id) engageGear(currentIndex, "news-detail", id);
+    });
+  });
+
+  viewAllTrigger?.addEventListener('click', () => {
+    engageGear(currentIndex, "news-list");
+  });
+
+  render();
+</script>
+
+<style is:global>
+  /* ==========================================================================
+     1. 製品カード共通スタイル
+     ========================================================================== */
+  .products-grid { display: block; margin-top: 1.5rem; }
+  .product-card { background: rgba(244, 246, 249, 0.03); border: 1px solid rgba(244, 246, 249, 0.08); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+  .product-header-row { display: table; width: 100%; margin-bottom: 0.5rem; }
+  .product-icon { display: table-cell; width: 40px; height: 40px; object-fit: contain; vertical-align: middle; border-radius: 6px; }
+  .product-icon-fallback { display: table-cell; width: 40px; height: 40px; background: #3a86ff; color: #ffffff; font-weight: bold; font-size: 1.1rem; text-align: center; line-height: 40px; border-radius: 6px; vertical-align: middle; }
+  .product-title-meta { display: table-cell; vertical-align: middle; padding-left: 0.8rem; }
+  .product-title-meta h3 { margin: 0; font-size: 1.2rem; color: #ffffff; }
+  .product-tagline { font-size: 0.75rem; opacity: 0.4; display: block; }
+  .product-desc { font-size: 0.9rem !important; line-height: 1.5 !important; opacity: 0.7 !important; margin-bottom: 0.8rem !important; }
+  .product-lp-link { color: #3a86ff; text-decoration: none; font-size: 0.85rem; font-weight: bold; }
+
+  /* ==========================================================================
+     2. サービスページ専用スタイル（1画面完結ミニマル）
+     ========================================================================== */
+  .service-intro-mini { font-size: 0.95rem !important; line-height: 1.6 !important; opacity: 0.7 !important; margin-bottom: 1.5rem !important; }
+  .service-section-mini { margin-bottom: 1.2rem; }
+  .service-section-mini h4 { margin: 0 0 0.4rem 0; font-size: 0.9rem; color: #3a86ff; letter-spacing: 0.05em; text-transform: uppercase; }
+  .service-caps-mini { display: block; }
+  .cap-card-mini { font-size: 0.95rem; margin-bottom: 0.3rem; }
+  .cap-card-mini strong { color: #ffffff; font-weight: 600; }
+  .cap-card-mini span { opacity: 0.6; }
+  .tech-inline { font-family: monospace; font-size: 0.95rem; opacity: 1; line-height: 1.6; background: rgba(244, 246, 249, 0.02); padding: 0.6rem 0.8rem; border-radius: 4px; border: 1px solid rgba(244, 246, 249, 0.05); word-break: break-all; }
+  
+  /* 📢 追記：各言語のシンタックスカラー（エディタ風発色） */
+  .lang-token { font-weight: 600; }
+  .lang-html { color: #e34f26; }
+  .lang-css { color: #2196f3; }
+  .lang-js { color: #f7df1e; }
+  .lang-vba { color: #107c41; }
+  .lang-ruby { color: #cc342d; }
+  .lang-php { color: #9c9ece; } /* 可読性を考慮し、少し明るめのパープルに調整 */
+  .lang-sql { color: #00bcd4; }
+  .lang-python { color: #3572a5; }
+  .lang-java { color: #f89820; }
+  .lang-kotlin { color: #b776ff; } /* 可読性を考慮し、少しマイルドなパープルに調整 */
+  .lang-swift { color: #f05138; }
+  .lang-dart { color: #00b0ff; }
+  .flow-inline { font-size: 0.85rem; opacity: 0.5; line-height: 1.6; word-break: break-all; }
+
+  @media (max-width: 768px) { .tech-inline, .flow-inline { font-size: 0.8rem; padding: 0.4rem; } }
+
+  /* ==========================================================================
+     3. 会社概要ページ専用スタイル
+     ========================================================================== */
+  .company-table-mini { display: table; width: 100%; margin-bottom: 0.8rem; font-size: 0.95rem; }
+  .company-row-mini { display: table-row; }
+  .company-label-mini { display: table-cell; width: 28%; padding: 0.35rem 0; color: #3a86ff; font-weight: 600; border-bottom: 1px solid rgba(244, 246, 249, 0.03); }
+  .company-val-mini { display: table-cell; width: 72%; padding: 0.35rem 0; color: rgba(244, 246, 249, 0.85); border-bottom: 1px solid rgba(244, 246, 249, 0.03); }
+  .location-text { font-size: 0.9rem; }
+  .map-switcher { display: flex; gap: 0.5rem; margin-top: 1rem; margin-bottom: 0.4rem; }
+  .map-tab { background: rgba(244, 246, 249, 0.02); border: 1px solid rgba(244, 246, 249, 0.08); color: rgba(244, 246, 249, 0.35); padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 700; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; }
+  .map-tab:hover:not(.active) { color: rgba(244, 246, 249, 0.8); border-color: rgba(244, 246, 249, 0.3); background: rgba(244, 246, 249, 0.05); }
+  .map-tab.active { background: rgba(58, 134, 255, 0.18) !important; border-color: #3a86ff !important; color: #ffffff !important; box-shadow: 0 0 8px rgba(58, 134, 255, 0.15); }
+  .company-map-section { margin-top: 0.8rem; border-radius: 6px; overflow: hidden; border: 1px solid rgba(58, 134, 255, 0.2); line-height: 0; position: relative; background: #0b132b; transition: border-color 0.3s ease; }
+  .company-map-section iframe { filter: grayscale(0.9) hue-rotate(200deg) saturate(1.5) brightness(0.8) opacity(0.85); transition: filter 0.3s ease, opacity 0.3s ease; }
+  .company-map-section:hover { border-color: #3a86ff; }
+  .company-map-section:hover iframe { filter: none !important; opacity: 1 !important; }
+
+  @media (max-width: 768px) {
+    .company-label-mini { display: block; width: 100%; padding-bottom: 0; border-bottom: none; font-size: 0.8rem; }
+    .company-val-mini { display: block; width: 100%; padding-top: 0.1rem; padding-bottom: 0.4rem; font-size: 0.9rem; }
+    .company-map-section { border-color: rgba(244, 246, 249, 0.15); }
+    .company-map-section iframe { filter: none !important; opacity: 1 !important; }
+  }
+
+  /* ==========================================================================
+     4. 📢 ご連絡ページ専用スタイル（1画面完結・ハイブリッド仕様）
+     ========================================================================== */
+  .contact-intro { font-size: 0.95rem !important; opacity: 0.7 !important; margin-bottom: 1.2rem !important; }
+  .contact-container { display: flex; gap: 1.5rem; align-items: flex-start; }
+  
+  /* 左側：フォーム */
+  .contact-form { flex: 1.2; display: flex; flex-direction: column; gap: 0.6rem; }
+  .form-row { display: flex; gap: 0.6rem; }
+  .form-row input { flex: 1; }
+  
+  /* 📢 修正：入力フォームを背景からクッキリ浮かび上がらせる調整 */
+  .contact-form input, .contact-form textarea {
+    background: rgba(244, 246, 249, 0.05); /* ➔ わずかに背景を明るくして「器」としての存在感を出す */
+    border: 1px solid rgba(244, 246, 249, 0.2);   /* ➔ 枠線の不透明度を上げて境界線をパキッと立たせる */
+    border-radius: 4px;
+    padding: 0.55rem 0.75rem;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+  }
+  
+  /* プレースホルダー（うっすらガイド文字）の視認性も連動して最適化 */
+  .contact-form input::placeholder, .contact-form textarea::placeholder { 
+    color: rgba(244, 246, 249, 0.4); 
+  }
+  
+  /* フォーカス（選択時）のエフェクトはキレ味抜群のWakaTecブルー発光を維持 */
+  .contact-form input:focus, .contact-form textarea:focus {
+    outline: none;
+    border-color: #3a86ff;
+    background: rgba(58, 134, 255, 0.05);
+    box-shadow: 0 0 8px rgba(58, 134, 255, 0.15);
+  }
+  
+  .submit-btn {
+    background: rgba(58, 134, 255, 0.12);
+    border: 1px solid rgba(58, 134, 255, 0.4);
+    color: #3a86ff;
+    padding: 0.6rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .submit-btn:hover { background: #3a86ff; color: #ffffff; }
+  .submit-btn span { inline-block; transition: transform 0.2s; }
+  .submit-btn:hover span { transform: translateX(3px); }
+
+  /* 右側：ダイレクト連絡先 */
+  /* 右側：ダイレクト連絡先（フォームと質感を同期し、さらに押しやすく） */
+  .contact-direct { flex: 0.8; }
+  
+  /* 📢 修正：ボックスの背景と枠線をフォームと完全に同期させて「器」として立たせる */
+  .direct-box { 
+    background: rgba(244, 246, 249, 0.05); 
+    border: 1px solid rgba(244, 246, 249, 0.2); 
+    border-radius: 6px; 
+    padding: 1.2rem; 
+  }
+  .direct-box h4 { margin: 0 0 0.8rem 0; font-size: 0.9rem; color: #3a86ff; letter-spacing: 0.05em; font-weight: 700; }
+  
+  /* 📢 修正：リンクをただの文字ではなく、サイバー感のある「独立した薄いボタン」に変形 */
+  .direct-link {
+    display: flex;
+    align-items: center;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-family: monospace; /* アドレスと電話番号の数字を等幅で美しく整列 */
+    padding: 0.55rem 0.75rem;
+    margin-bottom: 0.5rem;
+    background: rgba(244, 246, 249, 0.02);
+    border: 1px solid rgba(244, 246, 249, 0.05);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+  
+  /* 📢 ギミック：ホバー（スマホではタップ）した瞬間にWakaTecブルーにカチッと切り替わる */
+  .direct-link:hover { 
+    color: #ffffff; 
+    border-color: #3a86ff;
+    background: rgba(58, 134, 255, 0.08);
+    box-shadow: 0 0 8px rgba(58, 134, 255, 0.1);
+  }
+  .direct-icon { margin-right: 0.6rem; color: #3a86ff; font-weight: bold; font-size: 1rem; }
+  .direct-note { font-size: 0.75rem !important; opacity: 0.4 !important; line-height: 1.5 !important; margin-top: 0.8rem !important; }
+
+  @media (max-width: 768px) {
+    .contact-container { flex-direction: column; gap: 1.5rem; }
+    .contact-form { width: 100%; }
+    .form-row { flex-direction: column; gap: 0.6rem; }
+    .contact-direct { width: 100%; }
+    .direct-box { padding: 1rem; }
+  }
+</style>
