@@ -772,6 +772,66 @@ const sidebarNewsList = hasNews ? newsData.slice(0, 2) : [];
     }
   });
 
+  // 📢 追記：スマホ環境専用・左右スワイプによるページ切り替え制御
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  window.addEventListener('touchstart', (event) => {
+    // フォーム入力中はスワイプ誤動作を防ぐため完全スルー
+    if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+    
+    touchStartX = event.changedTouches[0].screenX;
+    touchStartY = event.changedTouches[0].screenY;
+  }, { passive: true });
+
+  window.addEventListener('touchend', (event) => {
+    if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+    if (isTransitioning) return;
+
+    const touchEndX = event.changedTouches[0].screenX;
+    const touchEndY = event.changedTouches[0].screenY;
+
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+
+    // 誤動作防止：縦スワイプの動きが大きい場合や、横の移動量が小さい（誤タップ）場合は無視
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return; 
+    if (Math.abs(deltaX) < 50) return; // 50px以上のスワイプで発動
+
+    // 📢 左に払う（画面が左に流れる＝進む）か、右に払う（画面が右に流れる＝戻る）かの判定
+    // ※若井さんの感覚（PC版の矢印下＝次のページ、矢印上＝前のページ）に完全同期
+    const isNextSwipe = deltaX < 0; // 左へスワイプ（Next）
+    const isPrevSwipe = deltaX > 0; // 右へスワイプ（Prev）
+
+    // 1. ニュース一覧モードの時
+    if (currentMode === "news-list") {
+      if (isPrevSwipe) engageGear(currentIndex, "page");
+      return;
+    }
+
+    // 2. ニュース詳細モードの時
+    if (currentMode === "news-detail") {
+      const currentNewsIndex = newsData.findIndex(n => n.id === selectedNewsId);
+      if (isNextSwipe) {
+        if (currentNewsIndex < newsData.length - 1) {
+          engageGear(currentIndex, "news-detail", newsData[currentNewsIndex + 1].id);
+        }
+      } else if (isPrevSwipe) {
+        if (currentNewsIndex > 0) {
+          engageGear(currentIndex, "news-detail", newsData[currentNewsIndex - 1].id);
+        }
+      }
+      return;
+    }
+
+    // 3. 通常ページモードの時
+    if (isNextSwipe) {
+      if (currentIndex < pages.length - 1) engageGear(currentIndex + 1, "page");
+    } else if (isPrevSwipe) {
+      if (currentIndex > 0) engageGear(currentIndex - 1, "page");
+    }
+  });
+
   buttons.forEach((button) => {
     button.addEventListener('click', () => {
       const index = parseInt(button.getAttribute('data-index') || "0");
